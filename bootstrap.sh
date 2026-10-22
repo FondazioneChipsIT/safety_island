@@ -20,7 +20,8 @@
 #   5. if the toolchain only provides riscv64-unknown-elf-* tools, creates
 #      riscv32-unknown-elf-* wrappers for them and sets the compiler flags that
 #      pulp-runtime needs with it;
-#   6. sources env/env.sh (VSIM_PATH, PULPRT_TARGET, ...).
+#   6. sets the variables of the simulation and software flow (VSIM_PATH,
+#      PULPRT_HOME, PULPRT_TARGET, ...).
 #
 # Optional overrides, set before sourcing:
 #   BENDER_MODULE   bender module to load      (default: bender/0.32.1)
@@ -195,8 +196,16 @@ _safed_bootstrap() {
     fi
 
     # 6. Variables of the simulation and software flow -------------------------
+    # PULPRT_HOME, PULP_SDK_HOME and PULPRT_TARGET come from the pulp-runtime
+    # configuration; pulp-runtime's `make run` links the Questa library found in
+    # VSIM_PATH. The FreeRTOS environment is only loaded if it was cloned.
+    if [ -d "$root/sw/pulp-freertos" ]; then
+        # shellcheck disable=SC1091
+        . "$root/sw/pulp-freertos/env/safety-island.sh" || { _bs_err "pulp-freertos environment failed"; return 1; }
+    fi
     # shellcheck disable=SC1091
-    . "$root/env/env.sh" || { _bs_err "env/env.sh failed"; return 1; }
+    . "$root/sw/pulp-runtime/configs/safety-island.sh" || { _bs_err "pulp-runtime configuration failed"; return 1; }
+    export VSIM_PATH="$root/sim"
 
     _bs_log "ready:"
     _bs_log "  $(bender --version) ($(command -v bender))"

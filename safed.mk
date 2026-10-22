@@ -92,7 +92,36 @@ clean: clean_$(SAFED_SIM_DIR)/compile.tcl
 ##############
 
 SIM_TOP ?= tb_safety_island_jtag
-include $(SAFED_ROOT)/sim/safed_sim.mk
+
+# On ETH machines Questa is started through a versioned wrapper command.
+ifneq (,$(wildcard /etc/iis.version))
+QUESTA ?= questa-2022.3
+VSIM   ?= $(QUESTA) vsim
+VOPT   ?= $(QUESTA) vopt
+else
+VSIM   ?= vsim
+VOPT   ?= vopt
+endif
+
+VOPT_FLAGS += +acc
+
+.PHONY: safed_sim_all
+safed_sim_all: safed_sim_build safed_sim_opt
+
+.PHONY: safed_sim_build
+safed_sim_build:
+	cd $(SAFED_SIM_DIR) && $(VSIM) -c -do 'source compile.tcl; quit'
+
+.PHONY: safed_sim_opt
+safed_sim_opt:
+	cd $(SAFED_SIM_DIR) && $(VOPT) $(VOPT_FLAGS) -o vopt_tb $(SIM_TOP) -work work
+
+.PHONY: safed_sim_clean
+safed_sim_clean:
+	$(RM) -r $(SAFED_SIM_DIR)/work
+	$(RM) $(SAFED_SIM_DIR)/modelsim.ini
+	$(RM) $(SAFED_SIM_DIR)/transcript
+	$(RM) $(SAFED_SIM_DIR)/vsim.wlf
 
 ##############
 ## SOFTWARE ##
