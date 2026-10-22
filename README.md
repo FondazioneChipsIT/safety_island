@@ -238,6 +238,14 @@ with `git checkout -- Bender.lock`). To update the dependencies on purpose run
 `bender update`, review the diff of `Bender.lock` and commit it together with the
 reason for the update.
 
+The Makefile keeps the generated files in step with it: `.deps` (the marker that
+the dependencies are checked out) depends on `Bender.lock`, and `sim/compile.tcl`
+(the list of sources given to Questa) on `.deps` and on `Bender.yml`. After a
+`bender update`, or any change to `Bender.lock` or `Bender.yml`, the next `make`
+checks the dependencies out again and regenerates `sim/compile.tcl`. The check
+compares modification times, so a `Bender.lock` restored with an old timestamp
+is not noticed: run `make clean` then.
+
 ### FreeRTOS tests
 
 `bootstrap.sh` does not clone `pulp-freertos`: it only loads its environment if
@@ -299,10 +307,8 @@ The FreeRTOS flow does not work yet with this toolchain and testbench, see
 | `no Python >= 3.9 found` | Install or load one and set `PYTHON=/path/to/python3.x`. |
 | `pip failed` | PyPI is not reachable. Behind a mirror/proxy set `PIP_INDEX_URL` (or the usual pip variables) before sourcing. |
 | `(vopt-19) Failed to access library 'work'` from `make build` | An earlier `make build` failed (typically `bender: command not found` because `bootstrap.sh` was not sourced) and left a truncated `sim/compile.tcl`. Run `make clean`, source `bootstrap.sh`, build again. |
+| `(vopt-2912) Port '…' not found in module '…'` after updating the dependencies | `sim/compile.tcl` and `sim/work` were built from other revisions of a dependency (for instance `axi_demux_id_counters` moved to its own file in `axi` 0.39.11). `make` regenerates `compile.tcl` by itself when `Bender.lock` changes; if it did not (old timestamp), run `make clean`, then `make build`. |
 | Something looks stale | `rm -rf .venv .tools .bender`, then source `bootstrap.sh` again. |
-
-This will start a simulation in Questasim. To activate GUI mode, add `gui=1` to
-the end of the last command.
 
 ## Citing
 

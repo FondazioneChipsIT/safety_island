@@ -18,8 +18,10 @@ SAFED_BOOT_DIR ?= $(SAFED_ROOT)/boot
 # Dependencies #
 ################
 
-# Ensure Bender dependencies are checked out
-$(SAFED_ROOT)/.deps:
+# Ensure Bender dependencies are checked out at the revisions of Bender.lock.
+# A newer Bender.lock (e.g. after `bender update`) checks them out again, which
+# also regenerates sim/compile.tcl.
+$(SAFED_ROOT)/.deps: $(SAFED_ROOT)/Bender.lock
 	$(BENDER) checkout
 	@touch $@
 
@@ -74,8 +76,9 @@ safed-bootrom-gen: $(SAFED_HW_DIR)/safety_island_bootrom.sv $(SAFED_HW_DIR)/safe
 # Scripts #
 ###########
 
-# Generate Safety Island Questa Simulation Compile script
-$(SAFED_SIM_DIR)/compile.tcl: $(SAFED_ROOT)/.deps
+# Generate Safety Island Questa Simulation Compile script. It lists the sources, so
+# it depends on the dependencies and on the manifest of this package.
+$(SAFED_SIM_DIR)/compile.tcl: $(SAFED_ROOT)/.deps $(SAFED_ROOT)/Bender.yml
 	echo 'set ROOT [file normalize [file dirname [info script]]/..]' > $(SAFED_SIM_DIR)/compile.tcl
 	bender script vsim -p safety_island -t test -t rtl -t cv32e40p_use_ff_regfile \
 		--vlog-arg="$(VLOG_ARGS)" --vcom-arg="" \
