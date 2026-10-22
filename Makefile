@@ -4,6 +4,14 @@
 
 SAFED_ROOT ?= .
 
+# Run the register generator with the project Python environment created by
+# `source bootstrap.sh`, even if it is not activated in this shell.
+ifneq (,$(wildcard $(SAFED_ROOT)/.venv/bin/python))
+PYTHON3 ?= $(abspath $(SAFED_ROOT)/.venv/bin/python)
+else ifneq ($(filter safed-hw-gen,$(MAKECMDGOALS)),)
+$(warning The project Python environment (.venv) does not exist: regtool.py will run with the first python3 in PATH. Run 'source bootstrap.sh' first so that the flow uses the pinned packages)
+endif
+
 include safed.mk
 
 .PHONY: checkout

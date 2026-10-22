@@ -18,8 +18,10 @@ SAFED_BOOT_DIR ?= $(SAFED_ROOT)/boot
 # Dependencies #
 ################
 
-# Ensure Bender dependencies are checked out
-$(SAFED_ROOT)/.deps:
+# Ensure Bender dependencies are checked out at the revisions of Bender.lock.
+# A newer Bender.lock (e.g. after `bender update`) checks them out again, which
+# also regenerates sim/compile.tcl.
+$(SAFED_ROOT)/.deps: $(SAFED_ROOT)/Bender.lock
 	$(BENDER) checkout
 	@touch $@
 
@@ -74,8 +76,9 @@ safed-bootrom-gen: $(SAFED_HW_DIR)/safety_island_bootrom.sv $(SAFED_HW_DIR)/safe
 # Scripts #
 ###########
 
-# Generate Safety Island Questa Simulation Compile script
-$(SAFED_SIM_DIR)/compile.tcl: $(SAFED_ROOT)/.deps
+# Generate Safety Island Questa Simulation Compile script. It lists the sources, so
+# it depends on the dependencies and on the manifest of this package.
+$(SAFED_SIM_DIR)/compile.tcl: $(SAFED_ROOT)/.deps $(SAFED_ROOT)/Bender.yml
 	echo 'set ROOT [file normalize [file dirname [info script]]/..]' > $(SAFED_SIM_DIR)/compile.tcl
 	bender script vsim -p safety_island -t test -t rtl -t cv32e40p_use_ff_regfile \
 		--vlog-arg="$(VLOG_ARGS)" --vcom-arg="" \
@@ -92,7 +95,36 @@ clean: clean_$(SAFED_SIM_DIR)/compile.tcl
 ##############
 
 SIM_TOP ?= tb_safety_island_jtag
-include $(SAFED_ROOT)/sim/safed_sim.mk
+
+# On ETH machines Questa is started through a versioned wrapper command.
+ifneq (,$(wildcard /etc/iis.version))
+QUESTA ?= questa-2022.3
+VSIM   ?= $(QUESTA) vsim
+VOPT   ?= $(QUESTA) vopt
+else
+VSIM   ?= vsim
+VOPT   ?= vopt
+endif
+
+VOPT_FLAGS += +acc
+
+.PHONY: safed_sim_all
+safed_sim_all: safed_sim_build safed_sim_opt
+
+.PHONY: safed_sim_build
+safed_sim_build:
+	cd $(SAFED_SIM_DIR) && $(VSIM) -c -do 'source compile.tcl; quit'
+
+.PHONY: safed_sim_opt
+safed_sim_opt:
+	cd $(SAFED_SIM_DIR) && $(VOPT) $(VOPT_FLAGS) -o vopt_tb $(SIM_TOP) -work work
+
+.PHONY: safed_sim_clean
+safed_sim_clean:
+	$(RM) -r $(SAFED_SIM_DIR)/work
+	$(RM) $(SAFED_SIM_DIR)/modelsim.ini
+	$(RM) $(SAFED_SIM_DIR)/transcript
+	$(RM) $(SAFED_SIM_DIR)/vsim.wlf
 
 ##############
 ## SOFTWARE ##
