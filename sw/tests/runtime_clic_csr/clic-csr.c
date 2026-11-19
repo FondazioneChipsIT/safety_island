@@ -37,9 +37,30 @@
         } \
     } while (0)
 
+/* handler.S: points mtvec to the exception vector below */
+void clic_setup_mtvec(void);
+
+/* Number of exceptions taken and mcause of the last one */
+static volatile uint32_t exception_count = 0;
+static volatile uint32_t exception_cause = 0;
+
+/* Exception handler: records the cause and skips the faulting instruction.
+ * It is meant for the `csrw` to a read only CSR, which has no compressed form
+ * and is therefore always 4 bytes long. */
+__attribute__((interrupt("machine"))) void exception_handler(void) {
+    uint32_t mepc = csr_read(CSR_MEPC);
+
+    exception_cause = csr_read(CSR_MCAUSE);
+    exception_count++;
+    csr_write(CSR_MEPC, mepc + 4);
+}
+
 int main(void) {
     uint32_t mintstatus;
     uint32_t mcause;
+
+    /* any exception goes to exception_handler instead of looping forever */
+    clic_setup_mtvec();
 
     printf("test CSR_MINTTHRESH\n");
     uint32_t thresh = 0xffaa;
@@ -51,9 +72,15 @@ int main(void) {
 
     printf("test CSR_MINTSTATUS\n");
     mintstatus = csr_read(CSR_MINTSTATUS); /* should be readable */
-    /* should be ready only */
+    assert(exception_count == 0);          /* ... without raising an exception */
+    /* should be read only: any write raises an illegal instruction exception,
+     * which exception_handler counts and skips */
     csr_write(CSR_MINTSTATUS, 0xffffffff);
-    assert(mintstatus == csr_read(CSR_MINTSTATUS));
+    assert(exception_count == 1);
+    /* not an interrupt (bit 31), exception code 2 = illegal instruction */
+    assert((exception_cause >> 31) == 0);
+    assert((exception_cause & 0xfff) == 2);
+    assert(mintstatus == csr_read(CSR_MINTSTATUS)); /* value is untouched */
 
     printf("test shared CSR_MCAUSE and CSR_MSTATUS\n");
     uint32_t mpp = 0x3;
@@ -70,6 +97,9 @@ int main(void) {
     /* we only have M mode so we can't force this to any other value */
     assert((mcause >> 28 & 3) == mpp);
     assert((mcause >> 27 & 1) == 0);
+
+    /* the illegal csrw above was the only exception of the whole test */
+    assert(exception_count == 1);
 
     return 0;
 }
