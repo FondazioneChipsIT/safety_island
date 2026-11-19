@@ -1225,7 +1225,7 @@ module safety_island_top import safety_island_pkg::*; #(
     .rst_ni,
     .obi_req_i ( axi_output_obi_req ),
     .obi_rsp_o ( axi_output_obi_rsp ),
-    .user_i    ( DefaultUser        ),// Only one ATOP-capable master (cv32e40p data port),
+    .user_i    ( DefaultUser        ),// Only one ATOP-capable master (cv32e40px data port),
                                       // so we have only one user config even when using user as ATOP ID.
     .axi_req_o ( axi_output_req_o   ),
     .axi_rsp_i ( axi_output_resp_i  ),

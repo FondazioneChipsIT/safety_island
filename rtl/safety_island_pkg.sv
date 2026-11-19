@@ -98,6 +98,10 @@ package safety_island_pkg;
     int unsigned              UseFastIrq;        // Use CV32RT (CV32 with fast
                                                  // interrupt extensions)
     int unsigned              UseFpu;            // Use FPU
+    int unsigned              FpuAddMulLat;      // Floating-Point ADDition/MULtiplication 
+                                                 // computing lane pipeline registers number
+    int unsigned              FpuOthersLat;      // Floating-Point COMParison/CONVersion 
+                                                 // computing lanes pipeline registers number
     int unsigned              UseIntegerCluster; // Make CV32 aware of the integer cluster
     int unsigned              UseXPulp;          // Use PULP extensions for CV32
     int unsigned              UseZfinx;          // Use Zfinx extensions. If 1,
@@ -131,6 +135,8 @@ package safety_island_pkg;
     UseVSPrio:          0,
     UseFastIrq:         1,
     UseFpu:             1,
+    FpuAddMulLat:       0,
+    FpuOthersLat:       0,
     UseIntegerCluster:  0,
     UseXPulp:           1,
     UseZfinx:           1,

@@ -137,7 +137,7 @@ module safety_core_wrap import safety_island_pkg::*; #(
 
       logic        debug_req;
       logic        fetch_enable;
-    } hmr_cv32e40p_all_inputs_t;
+    } hmr_cv32e40px_all_inputs_t;
 
     typedef struct packed {
       logic        instr_req;
@@ -156,7 +156,7 @@ module safety_core_wrap import safety_island_pkg::*; #(
       logic        debug_halted;
 
       logic        core_sleep;
-    } hmr_cv32e40p_nominal_outputs_t;
+    } hmr_cv32e40px_nominal_outputs_t;
 
     typedef struct packed {
       logic [31:0] addr;
@@ -164,16 +164,16 @@ module safety_core_wrap import safety_island_pkg::*; #(
       logic [31:0] wdata;
       logic [ 3:0] be;
       logic [ 5:0] atop;
-    } hmr_cv32e40p_bus_outputs_t;
+    } hmr_cv32e40px_bus_outputs_t;
 
-    hmr_cv32e40p_all_inputs_t                   sys_inputs;
-    hmr_cv32e40p_all_inputs_t [NumHMRCores-1:0] core_inputs;
+    hmr_cv32e40px_all_inputs_t                   sys_inputs;
+    hmr_cv32e40px_all_inputs_t [NumHMRCores-1:0] core_inputs;
 
-    hmr_cv32e40p_nominal_outputs_t                   sys_outputs;
-    hmr_cv32e40p_nominal_outputs_t [NumHMRCores-1:0] core_outputs;
+    hmr_cv32e40px_nominal_outputs_t                   sys_outputs;
+    hmr_cv32e40px_nominal_outputs_t [NumHMRCores-1:0] core_outputs;
 
-    hmr_cv32e40p_bus_outputs_t                  [NumBuses-1:0] sys_bus_outputs;
-    hmr_cv32e40p_bus_outputs_t [NumHMRCores-1:0][NumBuses-1:0] core_bus_outputs;
+    hmr_cv32e40px_bus_outputs_t                  [NumBuses-1:0] sys_bus_outputs;
+    hmr_cv32e40px_bus_outputs_t [NumHMRCores-1:0][NumBuses-1:0] core_bus_outputs;
     logic                                       [NumBuses-1:0] enable_bus_output;
 
     logic [NumHMRCores-1:0] core_setback;
@@ -232,9 +232,9 @@ module safety_core_wrap import safety_island_pkg::*; #(
       .InterleaveGrps    ( 1'b0                           ),
       .SeparateData      ( 1'b1                           ),
       .NumBusVoters      ( NumBuses                       ),
-      .all_inputs_t      ( hmr_cv32e40p_all_inputs_t      ),
-      .nominal_outputs_t ( hmr_cv32e40p_nominal_outputs_t ),
-      .bus_outputs_t     ( hmr_cv32e40p_bus_outputs_t     ),
+      .all_inputs_t      ( hmr_cv32e40px_all_inputs_t      ),
+      .nominal_outputs_t ( hmr_cv32e40px_nominal_outputs_t ),
+      .bus_outputs_t     ( hmr_cv32e40px_bus_outputs_t     ),
       .reg_req_t         ( reg_req_t                      ),
       .reg_rsp_t         ( reg_rsp_t                      )
     ) i_hmr_unit (
@@ -268,40 +268,35 @@ module safety_core_wrap import safety_island_pkg::*; #(
     );
 
     for (genvar i = 0; i < NumHMRCores; i++) begin : gen_cores
-      // APU signals
-      logic                                                  apu_req;
-      logic [cv32e40p_apu_core_pkg::APU_NARGS_CPU-1:0][31:0] apu_operands;
-      logic [cv32e40p_apu_core_pkg::APU_WOP_CPU-1:0]         apu_op;
-      logic [cv32e40p_apu_core_pkg::APU_NDSFLAGS_CPU-1:0]    apu_flags;
-      logic                                                  apu_gnt;
-      logic                                                  apu_rvalid;
-      logic [31:0]                                           apu_rdata;
-      logic [cv32e40p_apu_core_pkg::APU_NUSFLAGS_CPU-1:0]    apu_rflags;
-
       assign core_bus_outputs[i][ShadowBus].atop = '0;
+      // TODO(atomics): cv32e40px has `A_EXTENSION = 0` and does not export `data_atop_o`,
+      // so no atomic operation is issued on the data bus until the core supports them.
+      assign core_bus_outputs[i][DataBus].atop   = '0;
 
 `ifdef PULP_FPGA_EMUL
       (* no_ungroup *)
-      cv32e40p_core #(
+      cv32e40px_top #(
 `elsif SYNTHESIS
       (* no_ungroup *)
-      cv32e40p_core #(
+      cv32e40px_top #(
 `elsif VERILATOR
       (* no_ungroup *)
-      cv32e40p_core #(
+      cv32e40px_top #(
 `else
-      cv32e40p_wrapper #(
+      cv32e40px_tb_wrapper #(
 `endif
-        .PULP_XPULP       ( SafetyIslandCfg.UseXPulp          ),
-        .PULP_CLUSTER     ( SafetyIslandCfg.UseIntegerCluster ),
-        .FPU              ( SafetyIslandCfg.UseFpu            ),
-        .PULP_ZFINX       ( SafetyIslandCfg.UseZfinx          ),
-        .NUM_MHPMCOUNTERS ( SafetyIslandCfg.NumMhpmCounters   ),
-        .NUM_INTERRUPTS   ( TotalNumInterrupts                ),
-        .CLIC             ( SafetyIslandCfg.UseClic           ),
-        .SHADOW           ( SafetyIslandCfg.UseFastIrq        ),
-        .MCLICBASE_ADDR   ( PeriphBaseAddr+ClicAddrOffset     )
-      ) i_cv32e40p (
+        .COREV_PULP      (SafetyIslandCfg.UseXPulp         ),
+        .COREV_CLUSTER   (SafetyIslandCfg.UseIntegerCluster),
+        .FPU             (SafetyIslandCfg.UseFpu           ),
+        .FPU_ADDMUL_LAT  (SafetyIslandCfg.FpuAddMulLat     ),
+        .FPU_OTHERS_LAT  (SafetyIslandCfg.FpuOthersLat     ),
+        .ZFINX           (SafetyIslandCfg.UseZfinx         ),
+        .NUM_MHPMCOUNTERS(SafetyIslandCfg.NumMhpmCounters  ),
+        .CLIC            (SafetyIslandCfg.UseClic          ),
+        .MCLICBASE_ADDR  (PeriphBaseAddr+ClicAddrOffset    ),
+        .NUM_INTERRUPTS  (TotalNumInterrupts               ),
+        .SHADOW          (SafetyIslandCfg.UseFastIrq       )
+      ) i_cv32e40pxx (
         .clk_i,
         .rst_ni,
         .setback_i           ( core_setback[i]                  ),
@@ -329,7 +324,6 @@ module safety_core_wrap import safety_island_pkg::*; #(
         .data_addr_o         ( core_bus_outputs[i][DataBus].addr  ),
         .data_wdata_o        ( core_bus_outputs[i][DataBus].wdata ),
         .data_rdata_i        ( core_inputs [i].data_rdata         ),
-        .data_atop_o         ( core_bus_outputs[i][DataBus].atop  ),
 
         // Shadow memory interface
         .shadow_req_o        ( core_outputs[i].shadow_req           ),
@@ -341,15 +335,6 @@ module safety_core_wrap import safety_island_pkg::*; #(
         .shadow_wdata_o      ( core_bus_outputs[i][ShadowBus].wdata ),
         .shadow_rdata_i      ( core_inputs [i].shadow_rdata         ),
 
-        .apu_req_o           ( apu_req      ),
-        .apu_gnt_i           ( apu_gnt      ),
-        .apu_operands_o      ( apu_operands ),
-        .apu_op_o            ( apu_op       ),
-        .apu_flags_o         ( apu_flags    ),
-        .apu_type_o          (),
-        .apu_rvalid_i        ( apu_rvalid   ),
-        .apu_result_i        ( apu_rdata    ),
-        .apu_flags_i         ( apu_rflags   ),
 
         // Interrupt inputs
         .irq_i               ( core_inputs[i].irq       ),
@@ -364,72 +349,38 @@ module safety_core_wrap import safety_island_pkg::*; #(
         .debug_halted_o      ( core_outputs[i].debug_halted    ),
 
         .fetch_enable_i      ( core_inputs [i].fetch_enable ),
-        .core_sleep_o        ( core_outputs[i].core_sleep   ),
-        .external_perf_i     ( '0                           )
+        .core_sleep_o        ( core_outputs[i].core_sleep   )
       );
-
-      // FPU
-      if (SafetyIslandCfg.UseFpu) begin : gen_safety_island_fpu
-        (* no_ungroup *)
-        cv32e40p_fpu_wrap #(
-          .FP_DIVSQRT (1)
-        ) i_fpu (
-          .clk_i,
-          .rst_ni,
-          .flush_i        ( core_setback[i] ),
-          .apu_req_i      ( apu_req         ),
-          .apu_gnt_o      ( apu_gnt         ),
-          .apu_operands_i ( apu_operands    ),
-          .apu_op_i       ( apu_op          ),
-          .apu_flags_i    ( apu_flags       ),
-          .apu_rvalid_o   ( apu_rvalid      ),
-          .apu_rdata_o    ( apu_rdata       ),
-          .apu_rflags_o   ( apu_rflags      )
-        );
-      end else begin : gen_no_safety_island_fpu
-        //assign apu_req      = 1'b0;
-        assign apu_gnt      = 1'b0;
-        //assign apu_operands = 1'b0;
-        //assign apu_op       = 1'b0;
-        //assign apu_flags    = 1'b0;
-        assign apu_rvalid   = 1'b0;
-        assign apu_rdata    = 1'b0;
-        assign apu_rflags   = 1'b0;
-      end
 
     end
 
   end else begin : gen_single_core
 
-    // APU signals
-    logic                           apu_req;
-    logic [cv32e40p_apu_core_pkg::APU_NARGS_CPU-1:0][31:0] apu_operands;
-    logic [cv32e40p_apu_core_pkg::APU_WOP_CPU-1:0]         apu_op;
-    logic [cv32e40p_apu_core_pkg::APU_NDSFLAGS_CPU-1:0]    apu_flags;
-    logic                           apu_gnt;
-    logic                           apu_rvalid;
-    logic [31:0]                    apu_rdata;
-    logic [cv32e40p_apu_core_pkg::APU_NUSFLAGS_CPU-1:0]    apu_rflags;
+    // TODO(atomics): cv32e40px has `A_EXTENSION = 0` and does not export `data_atop_o`,
+    // so no atomic operation is issued on the data bus until the core supports them.
+    assign data_atop_o = '0;
 
 `ifdef PULP_FPGA_EMUL
-    cv32e40p_core #(
+    cv32e40px_top #(
 `elsif SYNTHESIS
-    cv32e40p_core #(
+    cv32e40px_top #(
 `elsif VERILATOR
-    cv32e40p_core #(
+    cv32e40px_top #(
 `else
-    cv32e40p_wrapper #(
+    cv32e40px_tb_wrapper #(
 `endif
-      .PULP_XPULP   (SafetyIslandCfg.UseXPulp),
-      .PULP_CLUSTER (SafetyIslandCfg.UseIntegerCluster),
-      .FPU          (SafetyIslandCfg.UseFpu),
-      .PULP_ZFINX   (SafetyIslandCfg.UseZfinx),
-      .NUM_MHPMCOUNTERS (SafetyIslandCfg.NumMhpmCounters),
-      .NUM_INTERRUPTS   (TotalNumInterrupts),
-      .CLIC             (SafetyIslandCfg.UseClic),
-      .SHADOW           (SafetyIslandCfg.UseFastIrq),
-      .MCLICBASE_ADDR   (PeriphBaseAddr+ClicAddrOffset)
-    ) i_cv32e40p (
+      .COREV_PULP      (SafetyIslandCfg.UseXPulp         ),
+      .COREV_CLUSTER   (SafetyIslandCfg.UseIntegerCluster),
+      .FPU             (SafetyIslandCfg.UseFpu           ),
+      .FPU_ADDMUL_LAT  (SafetyIslandCfg.FpuAddMulLat     ),
+      .FPU_OTHERS_LAT  (SafetyIslandCfg.FpuOthersLat     ),
+      .ZFINX           (SafetyIslandCfg.UseZfinx         ),
+      .NUM_MHPMCOUNTERS(SafetyIslandCfg.NumMhpmCounters  ),
+      .CLIC            (SafetyIslandCfg.UseClic          ),
+      .MCLICBASE_ADDR  (PeriphBaseAddr+ClicAddrOffset    ),
+      .NUM_INTERRUPTS  (TotalNumInterrupts               ),
+      .SHADOW          (SafetyIslandCfg.UseFastIrq       )
+    ) i_cv32e40pxx (
       .clk_i,
       .rst_ni,
       .setback_i           ( '0            ),
@@ -457,7 +408,6 @@ module safety_core_wrap import safety_island_pkg::*; #(
       .data_addr_o,
       .data_wdata_o,
       .data_rdata_i,
-      .data_atop_o,
 
       // Shadow memory interface
       .shadow_req_o,
@@ -469,15 +419,6 @@ module safety_core_wrap import safety_island_pkg::*; #(
       .shadow_wdata_o,
       .shadow_rdata_i,
 
-      .apu_req_o           ( apu_req      ),
-      .apu_gnt_i           ( apu_gnt      ),
-      .apu_operands_o      ( apu_operands ),
-      .apu_op_o            ( apu_op       ),
-      .apu_flags_o         ( apu_flags    ),
-      .apu_type_o          (),
-      .apu_rvalid_i        ( apu_rvalid   ),
-      .apu_result_i        ( apu_rdata    ),
-      .apu_flags_i         ( apu_rflags   ),
 
       // Interrupt inputs
       .irq_i       ( core_irq_onehot ),
@@ -492,37 +433,8 @@ module safety_core_wrap import safety_island_pkg::*; #(
       .debug_halted_o      (),
 
       .fetch_enable_i,
-      .core_sleep_o        (),
-      .external_perf_i     ('0)
+      .core_sleep_o        ()
     );
-
-    // FPU
-    if (SafetyIslandCfg.UseFpu) begin : gen_safety_island_fpu
-      cv32e40p_fpu_wrap #(
-        .FP_DIVSQRT (1)
-      ) i_fpu (
-        .clk_i,
-        .rst_ni,
-        .flush_i       (1'b0),
-        .apu_req_i     (apu_req),
-        .apu_gnt_o     (apu_gnt),
-        .apu_operands_i(apu_operands),
-        .apu_op_i      (apu_op),
-        .apu_flags_i   (apu_flags),
-        .apu_rvalid_o  (apu_rvalid),
-        .apu_rdata_o   (apu_rdata),
-        .apu_rflags_o  (apu_rflags)
-      );
-    end else begin : gen_no_safety_island_fpu
-      //assign apu_req      = 1'b0;
-      assign apu_gnt      = 1'b0;
-      //assign apu_operands = 1'b0;
-      //assign apu_op       = 1'b0;
-      //assign apu_flags    = 1'b0;
-      assign apu_rvalid   = 1'b0;
-      assign apu_rdata    = 1'b0;
-      assign apu_rflags   = 1'b0;
-    end
 
     reg_err_slv #(
       .DW      ( 32           ),
