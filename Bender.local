@@ -1,0 +1,12 @@
+# Local overrides for `bender update` (only read when this repository is the root package).
+#
+# `redundancy_cells` (rev 6a011b6) and `clic` (rev 3aa6f06) declare
+# `register_interface ^0.3.x`, while this package and `unbent` require `^0.4.1`.
+# With 0.x versions `^0.3` excludes 0.4, so the requirements cannot be satisfied
+# together and a full `bender update` stops on a conflict. The pinned revisions work
+# with 0.4.x (the only breaking change of 0.4.0 is the `payload_t` parameter of
+# `reg_err_slv`, which neither of them uses), so the version recorded in
+# `Bender.lock` is forced here. The `=` keeps it exactly at 0.4.2 and avoids an
+# unwanted jump to 0.4.7.
+overrides:
+  register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: "=0.4.2" }

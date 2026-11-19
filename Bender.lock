@@ -55,20 +55,20 @@ packages:
     source:
       Git: https://github.com/pulp-platform/common_verification.git
     dependencies: []
-  cv32e40p:
-    revision: 1a93f340e9dadb9f7c8c471f27a40932c8b1c62e
+  cv32e40px:
+    revision: 25e33308c7c6f3d407340063bebb6791b39ebc0f
     version: null
     source:
-      Git: https://github.com/pulp-platform/cv32e40p.git
+      Git: https://github.com/FondazioneChipsIT/cv32e40px.git
     dependencies:
     - common_cells
     - fpnew
     - tech_cells_generic
   fpnew:
-    revision: a8e0cba6dd50f357ece73c2c955d96efc3c6c315
-    version: null
+    revision: 79e453139072df42c9ec8f697132ba485d74e23d
+    version: 0.8.1
     source:
-      Git: https://github.com/pulp-platform/cvfpu.git
+      Git: https://github.com/pulp-platform/fpnew.git
     dependencies:
     - common_cells
     - fpu_div_sqrt_mvp
