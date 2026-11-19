@@ -23,24 +23,34 @@
 #ifndef __CSR_H
 #define __CSR_H
 
-/* TODO: complete this */
+/* TODO: complete this
+ *
+ * The addresses are the ones of `cv32e40px_pkg.sv` of the cv32e40px core
+ * (branch `eg/safety-island-port`). The CLIC CSRs exist only if the core is
+ * built with CLIC = 1: otherwise any access raises an illegal instruction.
+ * `mscratchcsw` (0x348) is not implemented by the core (M-mode only).
+ */
 #define CSR_MSTATUS    0x300
 #define CSR_MISA       0x301
-#define CSR_MIE	       0x304
-#define CSR_MTVEC      0x305
+#define CSR_MIE	       0x304 /* CLIC: reads as zero, writes are ignored */
+#define CSR_MTVEC      0x305 /* CLIC: mode field fixed to 0b11 (CLIC mode) */
+#define CSR_MTVT       0x307 /* CLIC: vector table base, bits [31:8] */
 #define CSR_MSCRATCH   0x340
 #define CSR_MEPC       0x341
 #define CSR_MCAUSE     0x342
 #define CSR_MTVAL      0x343
-#define CSR_MIP	       0x344
-#define CSR_MNXTI      0x345
+#define CSR_MIP	       0x344 /* CLIC: reads as zero */
+#define CSR_MNXTI      0x345 /* CLIC: only csrr, csrrsi (imm bits 0,2,4 = 0) and csrrci */
 #define CSR_PMPCFG0    0x3a0
 #define CSR_PMPADDR0   0x3b0
 #define CSR_MHARTID    0xf14
-#define CSR_MINTSTATUS 0x346
-#define CSR_MINTTHRESH 0x347
-#define CSR_MCLICBASE  0x350
-#define CSR_MNXTICFG   0xBD0
+#define CSR_MINTSTATUS 0xFB1 /* CLIC: read only, any write is illegal */
+#define CSR_MINTTHRESH 0x347 /* CLIC: only the lower 8 bits are writable */
+#define CSR_MSCRATCHCSWL 0x349 /* CLIC: write only, only csrrw is legal */
+#define CSR_MCLICBASE  0x350 /* CLIC: read only, any write is illegal */
+#define CSR_MSHWINT    0xBC0 /* custom, exists only if SHADOW = 1 */
+#define CSR_JALMNXTI   0xBCF /* custom, CLIC: same legal forms as mnxti */
+#define CSR_MNXTICFG   0xBD0 /* custom, CLIC */
 #define MIE 8
 
 #define __CSR_EXPAND(x) #x
