@@ -27,7 +27,7 @@
 #   BENDER_MODULE   bender module to load      (default: bender/0.32.1)
 #   QUESTA_MODULE   Questa module to load      (default: questa/2026.1_2)
 #   RISCV_MODULE    RISC-V GCC module to load  (default: corev-gcc/14.1.0-v0.3)
-#   PYTHON          interpreter used for .venv (default: newest python3.x >= 3.9)
+#   PYTHON          interpreter used for .venv (default: python3.11, else python3.12/python3, >= 3.11)
 
 if [ -z "${BASH_VERSION:-}" ]; then
     echo "bootstrap.sh: bash is required. Run: bash, then: source bootstrap.sh" >&2
@@ -98,18 +98,19 @@ _bs_note_newer() {
     fi
 }
 
-# Print the interpreter to use for the venv: $PYTHON, or the newest python3.x >= 3.9.
+# Print the interpreter to use for the venv: $PYTHON, or python3.11 (the one the
+# PeakRDL/iDMA flow is developed with), else python3.12 or the default python3, >= 3.11.
 _bs_find_python() {
     local c
     local -a candidates
     if [ -n "${PYTHON:-}" ]; then
         candidates=("$PYTHON")
     else
-        candidates=(python3.12 python3.11 python3.10 python3.9 python3)
+        candidates=(python3.11 python3.12 python3)
     fi
     for c in "${candidates[@]}"; do
         command -v "$c" >/dev/null 2>&1 || continue
-        if "$c" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' 2>/dev/null; then
+        if "$c" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
             command -v "$c"
             return 0
         fi
@@ -156,7 +157,7 @@ _safed_bootstrap() {
     _bs_note_newer "$questa_mod"
 
     # 2. Python virtual environment --------------------------------------------
-    py="$(_bs_find_python)" || { _bs_err "no Python >= 3.9 found (set PYTHON=/path/to/python3.x)"; return 1; }
+    py="$(_bs_find_python)" || { _bs_err "no Python >= 3.11 found (set PYTHON=/path/to/python3.x)"; return 1; }
     "$py" "$root/setup_env.py" || { _bs_err "setup_env.py failed"; return 1; }
     # shellcheck disable=SC1091
     . "$root/.venv/bin/activate" || return 1

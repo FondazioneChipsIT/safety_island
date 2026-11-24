@@ -5,13 +5,13 @@
 """Create the project virtual environment (`.venv`) from `requirements.txt`.
 
 Normally called by `bootstrap.sh`, but it can be run by hand with any
-interpreter >= 3.9:
+interpreter >= 3.11:
 
-    python3.12 setup_env.py
+    python3.11 setup_env.py
 
 The environment contains exactly the packages pinned in `requirements.txt`
-(the register generator `regtool.py` and the Python scripts that `pulp-runtime`
-runs during a simulation). It is rebuilt from scratch whenever
+(the register generators `regtool.py` and PeakRDL, and the Python scripts that
+`pulp-runtime` runs during a simulation). It is rebuilt from scratch whenever
 `requirements.txt` or the interpreter version changes, and left untouched
 otherwise.
 """
@@ -21,16 +21,17 @@ import sys
 import venv
 from pathlib import Path
 
-MIN_PYTHON = (3, 9)
+MIN_PYTHON = (3, 11)
 
 ROOT = Path(__file__).resolve().parent
 VENV_DIR = ROOT / ".venv"
 REQ_FILE = ROOT / "requirements.txt"
 STAMP_FILE = VENV_DIR / ".requirements.stamp"
 
-# Modules imported by regtool.py (reggen) and by the pulp-runtime scripts; used
-# as a smoke test after installing.
-SMOKE_IMPORTS = ("hjson", "mako", "yaml", "tabulate", "pkg_resources", "elftools", "numpy")
+# Modules imported by regtool.py (reggen), by PeakRDL and by the pulp-runtime
+# scripts; used as a smoke test after installing.
+SMOKE_IMPORTS = ("hjson", "mako", "yaml", "tabulate", "pkg_resources", "elftools", "numpy",
+                 "systemrdl", "peakrdl_regblock", "peakrdl_rawheader", "peakrdl_cheader")
 
 
 def log(msg: str) -> None:

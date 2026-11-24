@@ -4,7 +4,8 @@
 #
 # Every package (including the transitive MarkupSafe) is pinned to an exact
 # version so that the environment is identical on every machine. The pins have
-# wheels for Python 3.9 up to 3.12.
+# wheels for Python 3.11 and 3.12. The flow needs Python >= 3.11 because of the
+# PeakRDL generators below (iDMA asks for it too).
 
 # ---- Register generator (`make safed-hw-gen`) ------------------------------
 # `regtool.py` is shipped in the `register_interface` Bender dependency and is
@@ -38,3 +39,29 @@ pyelftools==0.32
 # Used by `pulp-runtime/bin/slm_hyper.py`. 1.26.4 is the last release that
 # supports Python 3.9 (and it supports up to 3.12).
 numpy==1.26.4
+
+# ---- iDMA register frontend generator (`idma.mk`, `idma` Bender dependency) ---
+# The register block of the iDMA frontend is described in SystemRDL and rendered
+# by `peakrdl regblock` (RTL), `peakrdl raw-header` (address map package) and
+# `peakrdl c-header` (C header for the software). Only the packages those three
+# subcommands need are installed, not the `peakrdl` umbrella package (HTML, IP-XACT
+# and UVM exporters). `peakrdl-rawheader` needs Python >= 3.10.
+
+# The `peakrdl` command and its plugin mechanism
+peakrdl-cli==1.5.0
+
+# SystemRDL parser and elaborator; its runtime is ANTLR
+systemrdl-compiler==1.33.0
+antlr4-python3-runtime==4.13.2
+
+# The three exporters
+peakrdl-regblock==1.3.1
+peakrdl-rawheader==0.2.9
+peakrdl-cheader==1.2.0
+
+# Dependencies of the exporters above. The Mako and MarkupSafe pins of the
+# register generator section also satisfy them.
+Jinja2==3.1.6
+Markdown==3.11.3
+colorama==0.4.6
+typing_extensions==4.16.0

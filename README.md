@@ -191,9 +191,10 @@ the `transcript`. All of it is git-ignored.
 - `bash`, `git` and GNU `make`.
 - The Environment Modules `module` command with the `bender`, `questa` and
   `corev-gcc` modules, or the equivalent tools already in `PATH`.
-- Python **3.9 or newer** with the `venv` module. The default `python3` of some
-  machines is too old (3.6 on the cluster this was developed on): the script picks
-  the newest of `python3.12 … python3.9` it finds.
+- Python **3.11 or newer** with the `venv` module (the PeakRDL generators of the iDMA
+  need it). The default `python3` of some machines is too old (3.6 on the cluster
+  this was developed on): the script uses `python3.11`, or else `python3.12` or
+  `python3` if they are new enough.
 - Network access to GitHub (Bender dependencies, `pulp-runtime`) and PyPI (Python
   packages).
 
@@ -206,7 +207,7 @@ Set these before sourcing the script:
 | `BENDER_MODULE` | bender module to load                | `bender/0.32.1`                          |
 | `QUESTA_MODULE` | Questa module to load                | `questa/2026.1_2`                        |
 | `RISCV_MODULE`  | RISC-V GCC module to load            | `corev-gcc/14.1.0-v0.3`                  |
-| `PYTHON`        | interpreter used to build `.venv`    | newest `python3.x` (3.9 or newer) found |
+| `PYTHON`        | interpreter used to build `.venv`    | `python3.11`, else `python3.12`/`python3` |
 
 ```
 QUESTA_MODULE=questa/2025.3 PYTHON=python3.11 source bootstrap.sh
@@ -214,10 +215,12 @@ QUESTA_MODULE=questa/2025.3 PYTHON=python3.11 source bootstrap.sh
 
 ### Python environment
 
-Python is used by two parts of the flow:
+Python is used by three parts of the flow:
 
 - the register generator `regtool.py` (OpenTitan's `reggen`, shipped in the
   `register_interface` dependency), run by `make safed-hw-gen`;
+- the PeakRDL generators of the iDMA register frontend (`peakrdl regblock`,
+  `raw-header` and `c-header`), driven by the `idma.mk` of the `idma` dependency;
 - the scripts of `pulp-runtime` that `make run` starts (`pyelftools`, `numpy`).
 
 `requirements.txt` pins every package to an exact version, including the
@@ -304,7 +307,7 @@ The FreeRTOS flow does not work yet with this toolchain and testbench, see
 | `bootstrap.sh must be sourced, not executed` | Use `source bootstrap.sh` (or `. bootstrap.sh`). |
 | `Bender.lock is missing` | `git checkout -- Bender.lock`, then source again. |
 | `cannot load module …` | The module does not exist on this machine. Check `module avail bender questa corev-gcc`, then set `BENDER_MODULE` / `QUESTA_MODULE` / `RISCV_MODULE`. |
-| `no Python >= 3.9 found` | Install or load one and set `PYTHON=/path/to/python3.x`. |
+| `no Python >= 3.11 found` | Install or load one and set `PYTHON=/path/to/python3.x`. |
 | `pip failed` | PyPI is not reachable. Behind a mirror/proxy set `PIP_INDEX_URL` (or the usual pip variables) before sourcing. |
 | `(vopt-19) Failed to access library 'work'` from `make build` | An earlier `make build` failed (typically `bender: command not found` because `bootstrap.sh` was not sourced) and left a truncated `sim/compile.tcl`. Run `make clean`, source `bootstrap.sh`, build again. |
 | `(vopt-2912) Port '…' not found in module '…'` after updating the dependencies | `sim/compile.tcl` and `sim/work` were built from other revisions of a dependency (for instance `axi_demux_id_counters` moved to its own file in `axi` 0.39.11). `make` regenerates `compile.tcl` by itself when `Bender.lock` changes; if it did not (old timestamp), run `make clean`, then `make build`. |
