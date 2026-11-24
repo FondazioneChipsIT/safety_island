@@ -22,6 +22,7 @@ dependencies:
   obi:                  { git: "https://github.com/pulp-platform/obi.git",                  version: 0.1.1 }
   unbent:               { git: "https://github.com/pulp-platform/unbent.git",               version: 0.1.6 }
   axi_obi:              { git: "https://github.com/pulp-platform/axi_obi.git",              version: 0.1.0 }
+  idma:                 { git: "https://github.com/pulp-platform/idma.git",                 version: 0.7.4 }
 
 sources:
   # Level 1
